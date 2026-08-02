@@ -1,0 +1,10 @@
+# 依赖（CI 用 npm ci 重新安装；本地符号链接不提交）
+node_modules/
+
+# Next.js 构建产物
+.next/
+out/
+
+# 编辑器 / 系统
+.DS_Store
+*.log

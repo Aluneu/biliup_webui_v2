@@ -1,0 +1,44 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (推导 BASE_PATH)
+        # 项目站点部署在 user.github.io/<repo>/ 子路径，需要 basePath=/<repo>
+        # 若仓库本身就是 <user>.github.io（user 主页，根域名），则 basePath 留空
+        env:
+          BASE_PATH: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '' || format('/{0}', github.event.repository.name) }}
+        run: |
+          echo "BASE_PATH=${BASE_PATH}"
+          npm run build
+          # 禁用 Jekyll：否则 GitHub Pages 会忽略 _next 目录，站点 CSS/JS 全丢
+          touch out/.nojekyll
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: gh-pages
+          force_orphan: true
