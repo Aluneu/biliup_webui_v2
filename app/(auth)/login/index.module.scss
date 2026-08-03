@@ -8,6 +8,13 @@
   overflow: hidden;
   font-family: "PingFang SC";
 
+  /* 移动端：允许纵向滚动，防止内容被裁切 */
+  @media (max-width: 480px) {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
   .main {
     display: flex;
     flex-basis: 0;
@@ -33,6 +40,13 @@
       background: var(--semi-color-bg-0);
       padding: 48px 56px;
       row-gap: 30px;
+
+      /* 移动端适配：窄屏缩小左右内边距，防止表单标签/输入框被裁切 */
+      @media (max-width: 480px) {
+        padding: 32px 20px;
+        width: 100%;
+        box-sizing: border-box;
+      }
 
       .component66 {
         display: inline-flex;
@@ -64,6 +78,11 @@
             color: var(--semi-color-text-0);
             font-size: 32px;
             font-weight: 600;
+
+            @media (max-width: 480px) {
+              font-size: 26px;
+              line-height: 36px;
+            }
           }
 
           .text3 {
