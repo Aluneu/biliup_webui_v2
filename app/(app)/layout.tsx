@@ -321,17 +321,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <Nav.Header
                 logo={
-                  <img
-                    src={`${basePath}/logo.svg`}
-                    alt="biliup"
-                    height={navCollapsed ? 36 : 90}
-                    width={navCollapsed ? 36 : 140}
-                    style={{
-                      width: navCollapsed ? 36 : 140,
-                      height: navCollapsed ? 36 : 90,
-                      objectFit: 'contain',
-                    }}
-                  />
+                  <a href={`${basePath}/`} style={{ display: 'flex', alignItems: 'center' }}>
+                    <img
+                      src={`${basePath}/logo.svg`}
+                      alt="biliup"
+                      height={navCollapsed ? 36 : 90}
+                      width={navCollapsed ? 36 : 140}
+                      style={{
+                        width: navCollapsed ? 36 : 140,
+                        height: navCollapsed ? 36 : 90,
+                        objectFit: 'contain',
+                      }}
+                    />
+                  </a>
                 }
                 style={
                   navCollapsed

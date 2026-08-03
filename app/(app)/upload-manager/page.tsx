@@ -20,12 +20,14 @@ import useSWR from 'swr'
 import UserList from '../../ui/UserList'
 import useSWRMutation from 'swr/mutation'
 import { useBiliUsers } from '../../lib/use-streamers'
+import getConfig from 'next/config'
 
 export default function Union() {
   const { Meta } = Card
   const { Paragraph, Title, Text } = Typography
   const { Header, Content } = Layout
   const [visible, setVisible] = useState(false)
+  const basePath = getConfig()?.basePath ?? ''
   const { trigger: deleteUpload } = useSWRMutation('/v1/upload/streamers', requestDelete)
   const {
     data: templates,

@@ -419,13 +419,16 @@ async function route(pathname: string, method: string, body: any, query: URLSear
   // 分区预取（包装结构）
   if (pathname === '/bili/archive/pre') return jsonResponse(archivePre)
 
-  // 图片代理：直接转发到真实图片，避免跨域
+  // 图片代理：离线/部署环境无法拉取外链图片，直接返回一张占位图，
+  // 保证用户列表、头像、投稿模板等依赖该接口的流程在 demo 下始终可用。
   if (pathname === '/bili/proxy') {
-    const target = query.get('url')
-    if (target) {
-      // 通过（未被 patch 覆盖的）真实 fetch 取外链图片
-      return fetch(target)
-    }
+    const PNG =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+    const bytes = Uint8Array.from(atob(PNG), (c) => c.charCodeAt(0))
+    return new Response(bytes, {
+      status: 200,
+      headers: { 'Content-Type': 'image/png' },
+    })
   }
 
   // 静态资源：日志返回示例文本；视频返回 404（播放器会优雅报错，页面不崩）
