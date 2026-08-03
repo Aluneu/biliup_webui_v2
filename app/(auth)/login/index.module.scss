@@ -110,6 +110,14 @@
         .checkbox {
           flex-shrink: 0;
         }
+
+        .demoHint {
+          flex-shrink: 0;
+          font-size: 13px;
+          line-height: 20px;
+          color: var(--semi-color-text-2);
+          text-align: center;
+        }
       }
     }
   }

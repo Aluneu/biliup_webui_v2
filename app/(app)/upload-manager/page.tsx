@@ -13,12 +13,10 @@ import {
 } from '@douyinfe/semi-ui'
 import { IconCloudStroked, IconPlusCircle, IconUserListStroked } from '@douyinfe/semi-icons'
 import { SetStateAction, useState } from 'react'
-import Link from 'next/link'
 import { Card } from '@douyinfe/semi-ui'
 import { IconEdit2Stroked, IconSendStroked, IconDeleteStroked } from '@douyinfe/semi-icons'
 import { fetcher, FileList, requestDelete, sendRequest, StudioEntity } from '../../lib/api-streamer'
 import useSWR from 'swr'
-import { useRouter } from 'next/navigation'
 import UserList from '../../ui/UserList'
 import useSWRMutation from 'swr/mutation'
 import { useBiliUsers } from '../../lib/use-streamers'
@@ -28,7 +26,6 @@ export default function Union() {
   const { Paragraph, Title, Text } = Typography
   const { Header, Content } = Layout
   const [visible, setVisible] = useState(false)
-  const router = useRouter()
   const { trigger: deleteUpload } = useSWRMutation('/v1/upload/streamers', requestDelete)
   const {
     data: templates,
@@ -172,11 +169,11 @@ export default function Union() {
                 marginRight: '12px',
               }}
             />
-            <Link href="/upload-manager/add" onClick={handleAddLinkClick}>
+            <a href={`${basePath}/upload-manager/add`} onClick={handleAddLinkClick}>
               <Button icon={<IconPlusCircle />} theme="solid" style={{ marginRight: 10 }}>
                 新建
               </Button>
-            </Link>
+            </a>
           </div>
         </nav>
       </Header>
@@ -230,7 +227,7 @@ export default function Union() {
                   <Button
                     icon={<IconEdit2Stroked />}
                     onClick={() => {
-                      router.push(`/upload-manager/edit?id=${item.id}`)
+                      window.location.href = `${basePath}/upload-manager/edit?id=${item.id}`
                     }}
                   ></Button>
                   <Popconfirm

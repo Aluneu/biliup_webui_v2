@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import getConfig from 'next/config'
 import useSWR from 'swr'
 import { Typography, Space, Spin } from '@douyinfe/semi-ui'
 import { IconExternalOpen } from '@douyinfe/semi-icons'
@@ -33,6 +33,7 @@ const STATUS_ORDER: Record<string, number> = {
 }
 
 export default function Home() {
+  const basePath = getConfig()?.basePath ?? ''
   const { data: streamers, error: e1 } = useSWR<LiveStreamerEntity[]>(
     '/v1/streamers',
     fetcher
@@ -146,9 +147,16 @@ export default function Home() {
           <section className={styles.block}>
             <div className={styles.secHead}>
               <span className={styles.secLabel}>进行中</span>
-              <Link href="/streamers" className={styles.viewAll}>
+              <a
+                href={`${basePath}/streamers/`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.location.href = `${basePath}/streamers/`
+                }}
+                className={styles.viewAll}
+              >
                 直播管理 →
-              </Link>
+              </a>
             </div>
             <div className={styles.grid}>
               {list.map((s) => {
@@ -198,9 +206,16 @@ export default function Home() {
               {list.length === 0 && (
                 <Text type="tertiary" className={styles.empty}>
                   暂无监控中的直播间，
-                  <Link href="/streamers" className={styles.emptyLink}>
+                  <a
+                    href={`${basePath}/streamers/`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      window.location.href = `${basePath}/streamers/`
+                    }}
+                    className={styles.emptyLink}
+                  >
                     去添加 →
-                  </Link>
+                  </a>
                 </Text>
               )}
             </div>

@@ -6,13 +6,13 @@ import { IconChevronDown, IconChevronUp, IconPlusCircle } from '@douyinfe/semi-i
 import { registerMediaQuery, responsiveMap } from '../../../lib/utils'
 import { sendRequest, StudioEntity } from '../../../lib/api-streamer'
 import useSWRMutation from 'swr/mutation'
-import { useRouter } from 'next/navigation'
+import getConfig from 'next/config'
 import TemplateFields from '../../../ui/TemplateFields'
 
 export default function Add() {
   const { Paragraph } = Typography
   const { trigger } = useSWRMutation('/v1/upload/streamers', sendRequest)
-  const router = useRouter()
+  const basePath = getConfig()?.basePath ?? ''
   const api = useRef<FormApi>()
   const [labelPosition, setLabelPosition] = useState<'top' | 'left' | 'inset'>('inset')
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function Add() {
               const result = await trigger(studioEntity)
 
               Toast.success('创建成功')
-              router.push('/upload-manager')
+              window.location.href = `${basePath}/upload-manager/`
             } catch (e: any) {
               // error handling
               Notification.error({

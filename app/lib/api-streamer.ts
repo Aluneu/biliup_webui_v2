@@ -46,18 +46,9 @@ export async function put<T>(url: string, { arg }: { arg: T }) {
 }
 
 async function handleResponse(res: Response) {
-	// 如果未登录，统一跳转
-	if (res.status === 401) {
-		// 可选：清理本地状态/缓存
-		// localStorage.removeItem('token') 等
-
-		// 跳转登录（带回跳）
-		const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-		window.location.href = `/login?next=${returnTo}`;
-		// 抛错让 SWR 知道失败（别返回 json）
-		throw new Error('Unauthorized');
-	}
-
+	// 演示站说明：本项目是 mock 假数据，没有真实鉴权概念。
+	// 原版会在 401 时整页跳登录，但那在演示站里是隐患（任一接口异常都会把已登录用户弹回登录页），
+	// 因此这里彻底移除 401 跳登录逻辑——只做普通错误抛出，绝不触发页面跳转。
 	if (!res.ok) {
 		// 尽量返回服务端错误信息
 		const text = await res.text().catch(() => '');

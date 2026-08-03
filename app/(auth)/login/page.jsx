@@ -1,94 +1,29 @@
 'use client'
 
 import React, {useState} from 'react';
-import {Nav, Avatar, Form, Checkbox, Button, Toast} from '@douyinfe/semi-ui';
-import { IconSemiLogo, IconFeishuLogo, IconHelpCircle, IconBell } from '@douyinfe/semi-icons';
+import { Form, Checkbox, Button } from '@douyinfe/semi-ui';
 import styles from './index.module.scss';
-import {API_BASE} from "../../lib/api-streamer";
-import useSWR from "swr";
+import getConfig from 'next/config';
 
-const fetcher = (url) => fetch(API_BASE + url).then(res => {
-    if (!res.ok) {
-        throw new Error('not found');
-    }
-    return res;
-});
-
+// 演示站：纯假登录。
+// 不做任何后端请求、不从响应里挖 token——点一下就写个固定会话标记并进入首页。
+// 这样彻底不依赖"登录接口返回结构"，也不会因为某个 mock 接口异常而被弹回登录页。
 const Component = () => {
-    const [username, setUsername] = useState('biliup');
     const [password, setPassword] = useState('');
     const [remember, setRemember] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // 使用 SWR 检查用户是否存在
-    const { data, error, isLoading } = useSWR('/v1/users/biliup', fetcher, {
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false,
-        shouldRetryOnError: false
-    });
+    // 本地预览 basePath 为空；部署到 GitHub Pages 子路径时为 /<repo>
+    const basePath = getConfig()?.basePath ?? '';
 
-    // 判断是否为注册模式
-    const isRegisterMode = error?.message === 'not found';
-
-    // 处理表单提交
-    const handleSubmit = async () => {
-        if (!username || !password) {
-            Toast.error('请填写用户名和密码');
-            return;
-        }
-
+    const fakeLogin = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
         setLoading(true);
-
-        try {
-            const endpoint = isRegisterMode ? '/v1/users/register' : '/v1/users/login';
-            const response = await fetch(API_BASE + endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username,
-                    password,
-                    ...(remember && { remember })
-                }),
-            });
-
-            if (response.ok) {
-                Toast.success(isRegisterMode ? '注册成功' : '登录成功');
-                // 获取当前 URL 的查询参数
-                const urlParams = new URLSearchParams(window.location.search);
-                // 获取 next 参数的值
-                const nextPath = urlParams.get('next');
-                if (nextPath) {
-                    window.location.href = decodeURIComponent(nextPath); // 解码 %2F 等转义字符
-                }
-                // router.push('/');
-            } else {
-                const result = await response.json();
-                Toast.error(result.message || (isRegisterMode ? '注册失败' : '登录失败'));
-            }
-        } catch (err) {
-            Toast.error('网络错误，请稍后重试');
-            console.error('Submit error:', err);
-        } finally {
-            setLoading(false);
-        }
+        // 写入模拟会话令牌（演示站靠 (app)/layout.tsx 守卫识别，只要存在即可）
+        localStorage.setItem('biliup_token', 'demo');
+        // 用 window.location.replace 硬跳转首页，避开静态导出 + trailingSlash 下的路由规范化死循环
+        window.location.replace(`${basePath}/`);
     };
-
-    // 加载中状态
-    if (isLoading) {
-        return (
-            <div className={styles.frame}>
-                <div className={styles.main}>
-                    <div className={styles.login}>
-                        <div style={{ textAlign: 'center', padding: '50px' }}>
-                            加载中...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className={styles.frame}>
@@ -96,17 +31,17 @@ const Component = () => {
                 <div className={styles.login}>
                     <div className={styles.component66}>
                         <img
-                            src="/logo.svg"
+                            src={`${basePath}/logo.svg`}
                             className={styles.logo}
                             alt="logo"
                         />
                         <div className={styles.header}>
                             <p className={styles.title}>
-                                {isRegisterMode ? '欢迎注册' : '欢迎回来'}
+                                欢迎回来
                             </p>
                             <p className={styles.text3}>
                                 <span className={styles.text}>
-                                    {isRegisterMode ? '注册' : '登录'}
+                                    登录
                                 </span>
                                 <span className={styles.text2}>&nbsp;biliup&nbsp;</span>
                                 <span className={styles.text}>账户</span>
@@ -121,7 +56,6 @@ const Component = () => {
                                 fieldStyle={{ padding: 0 }}
                                 style={{ width: 440 }}
                                 className={styles.formField}
-                                value={username}
                                 initValue='biliup'
                                 disabled
                             />
@@ -129,59 +63,33 @@ const Component = () => {
                                 label={{ text: "密码" }}
                                 field="password"
                                 type="password"
-                                placeholder={isRegisterMode ? "设置密码" : "输入密码"}
+                                placeholder="输入密码"
                                 fieldStyle={{ padding: 0 }}
                                 style={{ width: 440 }}
                                 className={styles.formField}
                                 value={password}
                                 onChange={setPassword}
                             />
-                            {isRegisterMode && (
-                                <Form.Input
-                                    label={{ text: "确认密码" }}
-                                    field="confirmPassword"
-                                    type="password"
-                                    placeholder="再次输入密码"
-                                    fieldStyle={{ padding: 0 }}
-                                    style={{ width: 440 }}
-                                    className={styles.formField}
-                                    rules={[
-                                        {
-                                            validator: (rule, value) => value === password,
-                                            message: '两次密码输入不一致'
-                                        }
-                                    ]}
-                                />
-                            )}
                         </Form>
-                        {!isRegisterMode && (
-                            <Checkbox
-                                type="default"
-                                className={styles.checkbox}
-                                checked={remember}
-                                onChange={(e) => setRemember(e.target.checked)}
-                            >
-                                记住我
-                            </Checkbox>
-                        )}
+                        <Checkbox
+                            type="default"
+                            className={styles.checkbox}
+                            checked={remember}
+                            onChange={(e) => setRemember(e.target.checked)}
+                        >
+                            记住我
+                        </Checkbox>
                         <Button
                             theme="solid"
                             block
                             loading={loading}
-                            onClick={handleSubmit}
+                            onClick={fakeLogin}
                         >
-                            {isRegisterMode ? '注册' : '登录'}
+                            登录
                         </Button>
-                        {isRegisterMode && (
-                            <div style={{ marginTop: '16px', textAlign: 'center', color: '#666' }}>
-                                <span style={{ fontSize: '14px' }}>
-                                    注册即表示同意
-                                    <a href="/terms" style={{ color: '#1890ff' }}>用户协议</a>
-                                    和
-                                    <a href="/privacy" style={{ color: '#1890ff' }}>隐私政策</a>
-                                </span>
-                            </div>
-                        )}
+                    </div>
+                    <div className={styles.demoHint}>
+                        演示站 · 输入任意密码即可登录
                     </div>
                 </div>
             </div>

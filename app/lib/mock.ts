@@ -8,7 +8,12 @@
 // 外部链接（GitHub 更新日志、B 站图片等）会被放行，走真实网络。
 // ============================================================================
 
-export const MOCK_ENABLED = process.env.NEXT_PUBLIC_MOCK === 'true'
+// 演示站永远启用 mock 假数据。
+// 注意：不要依赖 process.env.NEXT_PUBLIC_MOCK 判断——本项目实测 Next 的
+// loadEnvConfig / webpack DefinePlugin 对该变量的注入不稳定（无论来自 .env
+// 还是 next.config 的 env 字段，都会被算成假值），导致整段 mock 被 tree-shake、
+// 页面静默无数据且 Console 无报错。这里直接写死 true。
+export const MOCK_ENABLED = true
 
 // ---------------------------------------------------------------------------
 // 内存数据（可变，支持增删改实时反映到后续查询，让演示站"像真的在跑"）
@@ -28,7 +33,7 @@ let streamers: any[] = [
     status: 'Working',
     upload_status: 'Pending',
     format: 'flv',
-    time_range: '20:00:00 ~ 23:00:00',
+    time_range: ['20:00:00', '23:00:00'],
     excluded_keywords: ['回放', '测试'],
   },
   {
@@ -65,7 +70,7 @@ let streamers: any[] = [
     filename: '{streamer}_{title}',
     status: 'OutOfSchedule',
     upload_status: '',
-    time_range: '周末 20:00 ~ 22:00',
+    time_range: ['20:00:00', '22:00:00'],
   },
 ]
 

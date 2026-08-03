@@ -9,7 +9,6 @@ import {
   User,
 } from '../lib/api-streamer'
 import useSWR from 'swr'
-import { useRouter } from 'next/router'
 import {
   Button,
   Form,

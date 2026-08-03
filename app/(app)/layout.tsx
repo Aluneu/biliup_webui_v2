@@ -4,8 +4,8 @@ import './bg-global.css'
 import { useGlobalBackgroundInit } from '../lib/useGlobalBackground'
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import getConfig from 'next/config'
 import { Button, Nav } from '@douyinfe/semi-ui'
 import { OnSelectedData } from '@douyinfe/semi-ui/lib/es/navigation'
 import { Layout as SeLayout } from '@douyinfe/semi-ui/lib/es/layout'
@@ -21,12 +21,13 @@ import {
   IconHistory,
   IconBook,
   IconMenu,
+  IconExit,
 } from '@douyinfe/semi-icons'
-import Image from 'next/image'
 import ThemeButton from '../ui/ThemeButton'
 import { useSystemTheme, useTheme } from '../lib/utils'
 import { useIsMobile } from '../lib/useIsMobile'
 import { MOCK_ENABLED } from '../lib/mock'
+import Watermark from './components/Watermark'
 
 /**
  * 导航项强调色 —— 统一收口到一处，避免各页面各自硬编码颜色。
@@ -59,9 +60,59 @@ function navIcon(accent: string, icon: ReactNode) {
   )
 }
 
+/**
+ * 侧边栏导航映射。
+ * 注意：本项目是 `output:'export'` 静态导出，Semi 的 Nav 会拦截 `<Link>` 的点击事件，
+ * 且 next/link 的客户端路由在此形态下不可靠（点击不跳转）。因此统一在 onSelect 里用
+ * window.location.href 做「硬跳转」，配合 basePath 保证本地与 GitHub Pages 子路径都正确。
+ */
+const ROUTE_MAP: Record<string, string> = {
+  home: '/',
+  history: '/history',
+  dashboard: '/dashboard',
+  changelog: '/changelog',
+  streamers: '/streamers',
+  'upload-manager': '/upload-manager',
+  job: '/job',
+  status: '/status',
+  logViewer: '/logviewer',
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { Sider } = SeLayout
   const pathname = usePathname()
+  // basePath 在 GitHub Pages 子路径部署时非空（如 /repo），本地为空。
+  // 用它拼接硬跳转地址，保证登录页/退出在任意部署形态下都跳对。
+  const basePath = getConfig()?.basePath ?? ''
+
+  // ---- 演示站：强制登录守卫 ----
+  // 未携带模拟会话令牌（biliup_token）时，重定向到登录页，避免内容被直接浏览。
+  // 注意：必须用 window.location.replace 硬跳转，不能用 router.replace。
+  // 原因：本项目是 output:'export' + trailingSlash:true，router.replace('/login')
+  // 会被 Next 客户端路由反复规范化成 /login/ 又绕回，形成跳转死循环（表现为登录页无限刷新）。
+  // 初始必须为 null，保证 SSR 预渲染与客户端 hydration 首次渲染一致。
+  // 否则服务端渲染 null、客户端却直接读 localStorage 变成 true/false，
+  // 会触发 React #418/#423 hydration mismatch（表现为页面卡死、点页面无反应）。
+  // 真实鉴权状态完全交给下面的 useEffect 在客户端挂载后决定。
+  const [authed, setAuthed] = useState<boolean | null>(null)
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('biliup_token') : null
+    if (!token) {
+      const onLogin = window.location.pathname.replace(/\/+$/, '').endsWith('/login')
+      if (!onLogin) {
+        window.location.replace(`${basePath}/login/`)
+      }
+    } else {
+      setAuthed(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('biliup_token')
+    window.location.replace(`${basePath}/login/`)
+  }
+
   let initOpenKeys: any = []
   if (pathname.slice(1) === 'streamers' || pathname.slice(1) === 'history') {
     initOpenKeys = ['manager']
@@ -82,6 +133,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [])
   const systemTheme = useSystemTheme()
   useTheme(mode, systemTheme)
+  const isDark = mode === 'dark' || (mode === 'auto' && systemTheme === 'dark')
   const navCollapsed = isMobile ? false : isCollapsed
   let navStyle = navCollapsed ? { height: '100%', overflow: 'visible' } : { height: '100%' }
 
@@ -162,32 +214,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     [openKeys, selectedKeys]
   )
   const renderWrapper = useCallback(({ itemElement, isSubNav, isInSubNav, props }: any) => {
-    const routerMap: Record<string, string> = {
-      home: '/',
-      history: '/history',
-      dashboard: '/dashboard',
-      changelog: '/changelog',
-      streamers: '/streamers',
-      'upload-manager': '/upload-manager',
-      job: '/job',
-      status: '/status',
-      logViewer: '/logviewer',
-    }
-    if (!routerMap[props.itemKey]) {
+    if (!ROUTE_MAP[props.itemKey]) {
       return itemElement
     }
+    // 静态导出下 next/link 客户端导航不可靠（点击不跳转），改用原生 <a> + onClick 硬跳转。
+    // 原生锚点点击在任何情况下都会触发浏览器导航，配合 basePath 保证本地与 GitHub Pages 子路径都正确。
+    const href = `${basePath}${ROUTE_MAP[props.itemKey]}`
+    const target = href.endsWith('/') ? href : `${href}/`
     return (
-      <Link
+      <a
+        href={target}
+        onClick={(e) => {
+          e.preventDefault()
+          window.location.href = target
+        }}
         style={{
           textDecoration: 'none',
           fontWeight: '600 !important',
+          color: 'inherit',
         }}
-        href={routerMap[props.itemKey]}
       >
         {itemElement}
-      </Link>
+      </a>
     )
-  }, [])
+  }, [basePath])
 
   const onSelect = (data: OnSelectedData) => {
     setSelectedKeys([...data.selectedKeys])
@@ -199,6 +249,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const onCollapseChange = useCallback(() => {
     setIsCollapsed(!isCollapsed)
   }, [isCollapsed])
+  if (authed !== true) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          color: 'var(--semi-color-text-2)',
+          fontSize: 14,
+        }}
+      >
+        加载中…
+      </div>
+    )
+  }
+
   return (
     <SeLayout className="components-layout-demo semi-light-scrollbar">
           {isMobile && (
@@ -254,8 +321,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <Nav.Header
                 logo={
-                  <Image
-                    src="/logo.svg"
+                  <img
+                    src={`${basePath}/logo.svg`}
                     alt="biliup"
                     height={navCollapsed ? 36 : 90}
                     width={navCollapsed ? 36 : 140}
@@ -264,7 +331,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       height: navCollapsed ? 36 : 90,
                       objectFit: 'contain',
                     }}
-                    unoptimized
                   />
                 }
                 style={
@@ -321,6 +387,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 演示站 · 当前展示的是模拟数据，实时日志推送与历史视频回放为离线不可用功能
               </div>
             )}
+            {MOCK_ENABLED && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  padding: '6px 16px',
+                  borderBottom: '1px solid var(--semi-color-border)',
+                }}
+              >
+                <Button size="small" theme="borderless" icon={<IconExit />} onClick={handleLogout}>
+                  退出登录
+                </Button>
+              </div>
+            )}
+            <Watermark color={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} />
             {children}
           </SeLayout>
         </SeLayout>

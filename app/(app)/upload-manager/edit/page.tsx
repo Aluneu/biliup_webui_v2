@@ -13,7 +13,8 @@ import {
 import TemplateFields from '@/app/ui/TemplateFields'
 import { registerMediaQuery, responsiveMap } from '@/app/lib/utils'
 import useSWRMutation from 'swr/mutation'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import getConfig from 'next/config'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import useSWR from 'swr'
 import { useTypeTree } from '@/app/lib/use-streamers'
@@ -26,7 +27,7 @@ const Edit = () => {
     () => (searchParams.get('id') ? `/v1/upload/streamers/${searchParams.get('id')}` : null),
     fetcher
   )
-  const router = useRouter()
+  const basePath = getConfig()?.basePath ?? ''
   const { typeTree, isError } = useTypeTree()
   const api = useRef<FormApi>()
   const [labelPosition, setLabelPosition] = useState<'top' | 'left' | 'inset'>('inset')
@@ -99,7 +100,7 @@ const Edit = () => {
               const result = await trigger(studioEntity)
               await mutate(result)
               Toast.success('更新成功')
-              router.push('/upload-manager')
+              window.location.href = `${basePath}/upload-manager/`
             } catch (e: any) {
               // error handling
               Notification.error({
