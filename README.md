@@ -108,10 +108,11 @@ biliup_webui_v2/
 
 **自动触发**：推送到 `main`（或 `master`）即自动构建并发布；也可在 Actions 页手动 `workflow_dispatch`。
 
-**BASE_PATH 自动推导**（无需手动改）：
-- 仓库是普通项目站（如本仓库 `biliup_webui_v2`）→ `BASE_PATH=/biliup_webui_v2`，站点在 `https://Aluneu.github.io/biliup_webui_v2/`。
-- 若仓库本身是 `<user>.github.io`（user 主页，根域名）→ `BASE_PATH` 留空。
-- 推导逻辑在 deploy.yml 的 build 步骤里用 `github.repository` 解析，对 push 和手动触发都稳定。
+**BASE_PATH（资源前缀，必须和访问域名匹配，否则 CSS/JS 全 404）**：
+- **本项目当前绑定了自定义域名 `dome.somaos.xyz`** → 自定义域名 / user 主页都是「根域名」托管，`BASE_PATH` **留空**，资源走 `/_next/...`。这是默认行为（push 自动部署即根域名）。
+- 若想改用 `github.io/repo` **子路径**访问（如 `https://Aluneu.github.io/biliup_webui_v2/`）→ 须在 Actions 页**手动触发** workflow，把 `base_path` 输入填 `/biliup_webui_v2`。
+- ⚠️ 一个静态构建只能匹配一种域名形态：根域名（自定义域名）与 `github.io/repo` 子路径**二选一**，不能同时正确。绑定了自定义域名就走根域名（留空）。
+- 历史说明：早期版本按仓库名自动推导 `BASE_PATH=/biliup_webui_v2`，导致绑定自定义域名后页面排版错乱、JS 不加载（点登录无反应）。已改为默认根域名部署。
 
 **关键配置**（`next.config.js`）：
 - `output: 'export'` → 构建产物输出到 `out/`

@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      base_path:
+        description: '部署子路径：自定义域名/根域名部署留空；若想用 github.io/repo 子路径请填 /biliup_webui_v2'
+        required: false
+        default: ''
 
 # 官方 Pages 部署需要这两个权限（用 OIDC，不需要写仓库分支）
 permissions:
@@ -32,19 +37,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build（推导 BASE_PATH）
-        # 项目站点部署在 user.github.io/<repo>/ 子路径，需要 basePath=/<repo>。
-        # 若仓库本身就是 <user>.github.io（user 主页，根域名），basePath 留空。
-        # 在 shell 里用 github.repository 解析，对 push 和手动 workflow_dispatch 都稳。
+      - name: Build（BASE_PATH）
+        # 关键：BASE_PATH 决定资源（CSS/JS）的前缀，必须与「访问域名」匹配，否则资源 404。
+        #   - 自定义域名 / user 主页（根域名托管）：BASE_PATH 必须留空，资源走 /_next/...
+        #   - 普通项目站 user.github.io/<repo> 子路径：填 /仓库名，资源走 /<repo>/_next/...
+        # 本项目已绑定自定义域名 dome.somaos.xyz，默认留空（根域名部署）。
+        # 若临时想用 github.io/repo 子路径访问，手动触发 workflow 时把 base_path 填 /biliup_webui_v2 即可。
+        # push 事件与未填输入的手动触发均取空值（根域名）。
         run: |
-          REPO="${{ github.repository }}"
-          OWNER="${REPO%%/*}"
-          NAME="${REPO##*/}"
-          if [ "$NAME" = "${OWNER}.github.io" ]; then
-            BASE_PATH=""
-          else
-            BASE_PATH="/$NAME"
-          fi
+          BASE_PATH="${{ github.event.inputs.base_path }}"
           echo "BASE_PATH=${BASE_PATH}"
           BASE_PATH="$BASE_PATH" npm run build
           # 禁用 Jekyll：以防万一（官方 artifact 通常不走 Jekyll，但无妨）
