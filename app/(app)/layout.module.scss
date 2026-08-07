@@ -281,6 +281,8 @@
   height: 100dvh;
   transform: translateX(-102%);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  /* 必须高于遮罩(overlay z-index 999),否则抽屉内的导航项会被遮罩拦截无法点击 */
+  z-index: 1000;
 }
 
 .siderMobile.open {
@@ -334,15 +336,4 @@
   .statusDot {
     animation: none;
   }
-}
-
-/* ===== 演示站:模拟数据提示条 ===== */
-.demoBanner {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  font-size: 12px;
-  text-align: center;
-  color: var(--semi-color-warning, #d25f00);
-  background: var(--semi-color-warning-light-default, #fff7e8);
-  border-bottom: 1px solid var(--semi-color-border);
 }
