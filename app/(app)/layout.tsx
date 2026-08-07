@@ -175,8 +175,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/')
 
-  // 登录守卫:未认证不渲染(跳转交给 useEffect)
-  if (authed !== true) return null
+  // 登录守卫:未认证时渲染"加载中"占位(不能 return null!)。
+  // 注意:SSG/SSR 阶段 authed=null,若 return null 则所有 (app) 页面导出为空 HTML,
+  // 客户端渲染后 App Router 的路由树基线被破坏,next/link 客户端导航会静默失效(点击无反应)。
+  // 渲染与 SSR 一致的占位内容,保证 hydration 匹配,再由 useEffect 完成跳转。
+  if (authed !== true) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          color: 'var(--semi-color-text-2)',
+          fontSize: 14,
+        }}
+      >
+        加载中…
+      </div>
+    )
+  }
 
   return (
     <div className={styles.app}>

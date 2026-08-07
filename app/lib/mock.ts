@@ -492,11 +492,23 @@ export function installMockFetch() {
     }
   }
 
+  // 只 mock API 路径;其他同源请求(如 Next 客户端导航的 RSC fetch:
+  // fetch('/streamers', { headers: { RSC: '1' } }))必须放行走真实网络,
+  // 否则导航拿到 404/空响应,App Router 会静默放弃导航(点击无反应)。
+  const isApiPath = (pathname: string): boolean =>
+    pathname === '/v1' ||
+    pathname.startsWith('/v1/') ||
+    pathname.startsWith('/bili/') ||
+    pathname.startsWith('/static/')
+
   w.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url
     if (isMockable(url)) {
       try {
-        return await mockFetch(url, init)
+        const parsed = new URL(url, window.location.origin)
+        if (isApiPath(parsed.pathname)) {
+          return await mockFetch(url, init)
+        }
       } catch (e) {
         // 任何 mock 异常都回退到真实请求，保证页面不崩
         return originalFetch(input, init)
