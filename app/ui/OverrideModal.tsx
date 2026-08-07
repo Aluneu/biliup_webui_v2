@@ -9,7 +9,6 @@ import {
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import React, { useRef } from 'react'
 import { useState } from 'react'
-import getConfig from 'next/config'
 import { LiveStreamerEntity } from '../lib/api-streamer'
 import { SupportedPlatforms } from '@/app/ui/plugins'
 import { useBiliUsers } from '../lib/use-streamers'
@@ -50,7 +49,6 @@ const removeCircularReferences = (obj: any, seen = new WeakSet()): any => {
 
 const OverrideModal: React.FC<TemplateModalProps> = ({ children, entity, onOk }) => {
   const [isOpen, setOpen] = useState(false)
-  const basePath = getConfig()?.basePath ?? ''
 
   const toggle = () => {
     setOpen(!isOpen)
@@ -126,7 +124,6 @@ const OverrideModal: React.FC<TemplateModalProps> = ({ children, entity, onOk })
 
       const overrideConfig = { ...(values.override || {}) }
       Object.keys(values).forEach(key => {
-        console.log(key, values[key])
         if (!entityFields.has(key)) {
           if (values[key] !== undefined) {
             overrideConfig[key] = values[key] === '' ? null : values[key]
@@ -163,7 +160,7 @@ const OverrideModal: React.FC<TemplateModalProps> = ({ children, entity, onOk })
     <Collapse.Panel header="下载设置" itemKey="download">
       <div style={{ marginBottom: 12 }}>
         请到
-        <a href={`${basePath}/dashboard`} style={{ textDecoration: 'none', color: 'var(--semi-color-primary)' }}>
+        <a href="/dashboard" style={{ textDecoration: 'none', color: 'var(--semi-color-primary)' }}>
           空间配置
         </a>
         查看选项说明

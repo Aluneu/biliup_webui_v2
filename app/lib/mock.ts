@@ -206,6 +206,7 @@ let configuration: any = {
 }
 
 const statusData = {
+  version: 'v1.2.2',
   downloader_status: { '77330': 'recording', '21548251': 'idle', '12345': 'recording' },
   uploader_status: { '1': 'pending', '3': 'uploading' },
   config: { downloader: 'stream-gears', threads: 3, lines: 'AUTO' },

@@ -1,100 +1,32 @@
 'use client'
-import getConfig from 'next/config'
-import useSWR from 'swr'
+import Link from 'next/link'
 import { Typography, Space, Spin } from '@douyinfe/semi-ui'
 import { IconExternalOpen } from '@douyinfe/semi-icons'
 import {
-  fetcher,
-  LiveStreamerEntity,
-  StreamerInfo,
-  BiliupStatus,
-} from '@/app/lib/api-streamer'
-import { statusMeta, uploadStatusTag, platformName } from '@/app/lib/status'
+  useDashboard,
+  formatSize,
+} from '@/app/lib/use-dashboard'
+import StreamerCard from '../ui/StreamerCard'
+import EventTimeline from '../ui/EventTimeline'
 import BackgroundSetter from './components/BackgroundSetter'
 import styles from './page.module.scss'
 
 const { Text } = Typography
 
-function timeAgo(ts: number): string {
-  const diff = Math.floor((Date.now() - ts * 1000) / 1000)
-  if (diff < 60) return '刚刚'
-  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
-  return `${Math.floor(diff / 86400)} 天前`
-}
-
-// 状态排序：录制中优先，让"正在发生"排在最前面
-const STATUS_ORDER: Record<string, number> = {
-  Working: 0,
-  Pending: 1,
-  Idle: 2,
-  OutOfSchedule: 3,
-  Pause: 4,
-}
-
+/**
+ * 控制台主页 —— Monitor 表面:2 秒内回答"几个在录、有没有问题"。
+ * 数据全部来自现有后端接口(见 use-dashboard),零后端改动。
+ */
 export default function Home() {
-  const basePath = getConfig()?.basePath ?? ''
-  const { data: streamers, error: e1 } = useSWR<LiveStreamerEntity[]>(
-    '/v1/streamers',
-    fetcher
-  )
-  const { data: infos, error: e2 } = useSWR<StreamerInfo[]>(
-    '/v1/streamer-info',
-    fetcher
-  )
-  const { data: status, error: statusError } = useSWR<BiliupStatus>(
-    '/v1/status',
-    fetcher
-  )
+  const d = useDashboard()
 
-  // url -> 最近录制时间（取最新）
-  const recentByUrl = new Map<string, number>()
-  ;(infos ?? []).forEach((i) => {
-    if (i.url) {
-      recentByUrl.set(i.url, Math.max(recentByUrl.get(i.url) ?? 0, i.date))
-    }
-  })
-
-  // url -> 最新直播标题（卡片主角「直播间标题」）
-  const titleByUrl = new Map<string, { title: string; date: number }>()
-  ;(infos ?? []).forEach((i) => {
-    if (i.url && i.title) {
-      const cur = titleByUrl.get(i.url)
-      if (!cur || i.date > cur.date) titleByUrl.set(i.url, { title: i.title, date: i.date })
-    }
-  })
-
-  const list = (streamers ?? [])
-    .slice()
-    .sort(
-      (a, b) =>
-        (STATUS_ORDER[a.status ?? ''] ?? 9) - (STATUS_ORDER[b.status ?? ''] ?? 9)
-    )
-
-  const total = list.length
-  const recording = list.filter((s) => s.status === 'Working').length
-  const pending = list.filter((s) => s.upload_status === 'Pending').length
-  const uploading = list.filter((s) => s.upload_status === 'Working').length
-
-  const loading = !streamers && !infos && !e1 && !e2 && !status && !statusError
-  const connectError = (!!e1 || !!e2 || !!statusError) && !streamers && !infos
-
-  const isOnline = !!status && !statusError
-  const isOffline = !!statusError
-  const statusModifier = isOnline
-    ? styles.online
-    : isOffline
-    ? styles.offline
-    : styles.checking
-  const statusText = isOnline
-    ? `运行中 · ${recording} 路录制中`
-    : isOffline
-    ? '服务未连接'
-    : '检查中...'
+  const streamers = d.streamers ?? []
+  const live = streamers.filter((s) => s.status === 'Working')
+  const offline = streamers.filter((s) => s.status !== 'Working')
 
   return (
     <div className={styles.page}>
-      {/* 顶栏：状态灯 + 文档 */}
+      {/* 顶栏:状态 + 文档 */}
       <div className={styles.head}>
         <Space>
           <a
@@ -105,119 +37,126 @@ export default function Home() {
           >
             <IconExternalOpen size="small" /> 文档
           </a>
-          <span className={`${styles.statusPill} ${statusModifier}`}>
-            <span className={`${styles.dot} ${statusModifier}`} /> {statusText}
+          {d.version ? <span className={styles.version}>v{d.version}</span> : null}
+          <span
+            className={`${styles.statusPill} ${
+              d.connectError ? styles.offline : styles.online
+            }`}
+          >
+            <span
+              className={`${styles.dot} ${
+                d.connectError ? styles.offline : styles.online
+              }`}
+            />
+            {d.connectError
+              ? '服务未连接'
+              : d.loading
+                ? '连接中…'
+                : `运行中 · ${d.recording} 路录制中`}
           </span>
         </Space>
       </div>
 
       <BackgroundSetter />
 
-      {loading ? (
+      {d.loading ? (
         <div style={{ padding: '80px 0', textAlign: 'center' }}>
           <Spin size="large" />
         </div>
-      ) : connectError ? (
+      ) : d.connectError ? (
         <div className={styles.errorBox}>
           <Text>
-            无法连接后端，请确认 biliup 服务已在 <Text strong>http://localhost:19159</Text>{' '}
-            运行，且已登录。
+            无法连接后端,请确认 biliup 服务已在{' '}
+            <Text strong>http://localhost:19159</Text> 运行,且已登录。
           </Text>
         </div>
       ) : (
         <>
-          {/* 紧凑概览条 */}
+          {d.streamersFailed && (
+            <div className={styles.warnBox}>
+              <Text>
+                主播列表加载失败,监控数量与卡片暂不可用,请检查后端连接或稍后重试。
+              </Text>
+            </div>
+          )}
+          {d.infosFailed && (
+            <div className={styles.warnBox}>
+              <Text>直播信息(标题 / 录制时长)加载失败,相关字段可能缺失。</Text>
+            </div>
+          )}
+
+          {/* 概览条:全部来自真实聚合(无虚构指标) */}
           <div className={styles.overview}>
             <span className={styles.ovItem}>
-              <b>{total}</b> 个监控
+              <b>{d.streamersFailed ? '—' : d.total}</b> 个监控
             </span>
             <span className={styles.ovItem}>
-              <span className={styles.ovDotRec} />
-              <b>{recording}</b> 路录制中
+              <span className={`${styles.ovDot} ${styles.rec}`} />
+              <b>{d.recording}</b> 路录制中
             </span>
             <span className={styles.ovItem}>
-              <b>{pending}</b> 待上传
+              <b>{d.pending}</b> 待上传
             </span>
             <span className={styles.ovItem}>
-              <b>{uploading}</b> 上传中
+              <b>{d.uploading}</b> 上传中
+            </span>
+            <span className={styles.ovItem}>
+              录制文件 <b>{formatSize(d.totalSize)}</b>
+            </span>
+            <span className={styles.ovItem}>
+              今日新增 <b>{formatSize(d.todaySize)}</b>
             </span>
           </div>
 
-          {/* 进行中：卡片网格 */}
-          <section className={styles.block}>
+          {/* 进行中 */}
+          <section className={styles.section}>
             <div className={styles.secHead}>
-              <span className={styles.secLabel}>进行中</span>
-              <a
-                href={`${basePath}/streamers/`}
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.location.href = `${basePath}/streamers/`
-                }}
-                className={styles.viewAll}
-              >
+              <span className={styles.secLabel}>
+                进行中<span className={styles.secCount}>{live.length}</span>
+              </span>
+              <Link href="/streamers" className={styles.secLink}>
                 直播管理 →
-              </a>
+              </Link>
             </div>
-            <div className={styles.grid}>
-              {list.map((s) => {
-                const meta = statusMeta(s.status)
-                const isRec = s.status === 'Working'
-                const recent = recentByUrl.get(s.url)
-                return (
-                  <div
-                    key={s.id}
-                    className={`${styles.card} ${isRec ? styles.rec : ''}`}
-                  >
-                    <div className={styles.cardHead}>
-                      <span className={styles.cardStatus}>
-                        <span className={`${styles.recDot} ${styles[meta.cls]}`} />
-                        {s.remark ? `[${s.remark}]` : '[未命名]'}
-                      </span>
-                      <span className={styles.cardPlat}>
-                        {platformName(s.url)}
-                      </span>
-                    </div>
-                    <div
-                      className={styles.cardName}
-                      title={titleByUrl.get(s.url)?.title || s.remark || s.url}
-                    >
-                      {titleByUrl.get(s.url)?.title || s.remark || s.url}
-                    </div>
-                    <a
-                      className={styles.cardSub}
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={s.url}
-                    >
-                      {s.url}
-                    </a>
-                    <div className={styles.cardMeta}>
-                      {uploadStatusTag(s.upload_status)}
-                      {recent ? (
-                        <span className={styles.metaTime}>
-                          最近录制 {timeAgo(recent)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                )
-              })}
-              {list.length === 0 && (
-                <Text type="tertiary" className={styles.empty}>
-                  暂无监控中的直播间，
-                  <a
-                    href={`${basePath}/streamers/`}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      window.location.href = `${basePath}/streamers/`
-                    }}
-                    className={styles.emptyLink}
-                  >
-                    去添加 →
-                  </a>
-                </Text>
-              )}
+            {d.streamersFailed ? (
+              <Text type="tertiary">主播列表加载失败,无法显示卡片。</Text>
+            ) : live.length === 0 ? (
+              <Text type="tertiary">当前没有正在录制的直播间。</Text>
+            ) : (
+              <div className={styles.grid}>
+                {live.map((s) => (
+                  <StreamerCard key={s.id} streamer={s} info={d.infoByUrl.get(s.url)} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* 未开播 */}
+          <section className={styles.section}>
+            <div className={styles.secHead}>
+              <span className={styles.secLabel}>
+                未开播<span className={styles.secCount}>{offline.length}</span>
+              </span>
+            </div>
+            {offline.length === 0 ? (
+              <Text type="tertiary">全部直播间均在录制中。</Text>
+            ) : (
+              <div className={styles.grid}>
+                {offline.map((s) => (
+                  <StreamerCard key={s.id} streamer={s} info={d.infoByUrl.get(s.url)} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* 最近事件:前端合成的 24h 活动流 */}
+          <section className={styles.section}>
+            <div className={styles.secHead}>
+              <span className={styles.secLabel}>最近事件</span>
+              <span className={styles.secNote}>最近 24h</span>
+            </div>
+            <div className={styles.timelineCard}>
+              <EventTimeline events={d.events} />
             </div>
           </section>
         </>
