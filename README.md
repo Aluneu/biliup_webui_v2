@@ -4,7 +4,8 @@
 > 用浏览器内的 mock 层还原全部接口与页面形态，**不需要任何后端**。
 
 - 对应上游版本：**biliup v1.3.4**（2026-10-23 的 `master`）
-- 部署地址：`https://dome.somaos.xyz/`（GitHub Pages，推 `main` 自动部署）
+- 部署地址：`https://dome.reccloud.icu/`（GitHub Pages 自定义域名，推 `main` 自动部署）
+- 仓库：`https://github.com/Aluneu/biliup_webui_v2`
 - 登录方式：**输入任意账号密码即可登录**（纯前端假登录，见 §5）
 
 ---
