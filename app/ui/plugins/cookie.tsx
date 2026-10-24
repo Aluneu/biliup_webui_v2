@@ -1,10 +1,12 @@
 'use client'
 import React from 'react'
-import { Form, Select, Collapse } from '@douyinfe/semi-ui'
+import { Form, Select } from '@douyinfe/semi-ui'
+import PlatformPanel from './PlatformPanel'
 
 type Props = {
   entity: any
   list: any
+  bare?: boolean
 }
 
 const Cookie: React.FC<Props> = props => {
@@ -12,10 +14,17 @@ const Cookie: React.FC<Props> = props => {
   const list = props.list
   return (
     <>
-      <Collapse.Panel header="用户 Cookie" itemKey="user">
+      <PlatformPanel header="用户 Cookie" itemKey="user" bare={props.bare}>
         <Form.Input
-          field="user.kuaishou_cookie"
-          extraText="填入 Cookie 降低风控风险。需 client_key/kuaishou.live.*/userId 的值，勿填全部 Cookie。"
+          field="kuaishou_cookie"
+          extraText={
+            <div style={{ fontSize: '14px' }}>
+              填入快手 Cookie 可降低被风控的概率。
+              <br />
+              只需 client_key、kuaishou.live.bfb1s、kuaishou.live.web_st、kuaishou.live.web_ph、userId
+              五项的值，<strong>不要把全部 Cookie 粘进来</strong>。
+            </div>
+          }
           placeholder="client_key=none;kuaishou.live.bfb1s=none;kuaishou.live.web_st=none;kuaishou.live.web_ph=none;userId=none;"
           label="快手 Cookie（kuaishou_cookie）"
           style={{ width: '100%' }}
@@ -36,6 +45,7 @@ const Cookie: React.FC<Props> = props => {
         />
         <Form.Input
           field="user.niconico-password"
+          mode="password"
           extraText="您的 Niconico 账户的密码。"
           label="ニコニコ動画 密码（niconico-password）"
           style={{ width: '100%' }}
@@ -86,7 +96,7 @@ const Cookie: React.FC<Props> = props => {
             padding: 0,
           }}
         />
-      </Collapse.Panel>
+      </PlatformPanel>
     </>
   )
 }

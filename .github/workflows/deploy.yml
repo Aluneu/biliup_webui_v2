@@ -47,7 +47,7 @@ jobs:
         run: |
           BASE_PATH="${{ github.event.inputs.base_path }}"
           echo "BASE_PATH=${BASE_PATH}"
-          BASE_PATH="$BASE_PATH" npm run build
+          NEXT_TELEMETRY_DISABLED=1 BASE_PATH="$BASE_PATH" npm run build
           # 禁用 Jekyll：以防万一（官方 artifact 通常不走 Jekyll，但无妨）
           touch out/.nojekyll
 

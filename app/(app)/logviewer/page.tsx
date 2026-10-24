@@ -5,35 +5,36 @@ import { Button, Spin, Typography, Tabs, TabPane, Toast } from '@douyinfe/semi-u
 import { IconCustomerSupport, IconRefresh, IconClear, IconSave } from '@douyinfe/semi-icons'
 import PageHeader from '../components/PageHeader'
 import dc from '@/app/ui/data-card.module.scss'
+import { revalidateMe } from '@/app/lib/api-streamer'
+import { appendLogMessage } from '@/app/lib/log-buffer'
 
 // 日志内容组件
 interface LogContentProps {
   logs: string[]
-  logContainerRef: React.RefObject<HTMLDivElement>
   isLoading: boolean
 }
 
-const LogContent = ({ logs, logContainerRef, isLoading }: LogContentProps) => {
-  // 判断滚动条是否接近底部
-  const isScrolledToBottom = () => {
-    const containers = document.getElementsByClassName('log-container')
-    if (containers.length === 0) return false
-    const container = containers[0] as HTMLElement
-    const diff = container.scrollHeight - container.scrollTop
-    return diff - container.clientHeight <= 50
-  }
-
-  const scrollToBottom = () => {
-    const containers = document.getElementsByClassName('log-container')
-    if (containers.length > 0) {
-      const container = containers[0] as HTMLElement
-      container.scrollTop = container.scrollHeight
-    }
+const LogContent = ({ logs, isLoading }: LogContentProps) => {
+  // 两个 Tab 的内容都挂载着（未选中的 display: none），每个实例只管自己的容器；
+  // 按 class 取第一个容器时，第二个 Tab 永远在滚那个隐藏的
+  const containerRef = useRef<HTMLDivElement>(null)
+  // 用户没往上翻时跟随新日志。在滚动时记下，不能等新行渲染后再量：一批到达多行就超过阈值，跟随断掉
+  const followRef = useRef(true)
+  const handleScroll = () => {
+    const container = containerRef.current
+    if (!container) return
+    followRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 50
   }
 
   useEffect(() => {
-    if (logs.length > 0 && isScrolledToBottom()) {
-      scrollToBottom()
+    // 清空 / 切换 Tab / 重连后从头跟随
+    if (logs.length === 0) {
+      followRef.current = true
+      return
+    }
+    const container = containerRef.current
+    if (container && followRef.current) {
+      container.scrollTop = container.scrollHeight
     }
   }, [logs])
 
@@ -48,7 +49,8 @@ const LogContent = ({ logs, logContainerRef, isLoading }: LogContentProps) => {
   return (
     <div
       className="log-container"
-      ref={logContainerRef}
+      ref={containerRef}
+      onScroll={handleScroll}
       style={{
         height: 'calc(100vh - 220px)',
         minHeight: 320,
@@ -83,18 +85,19 @@ export default function LogViewer() {
   const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('ds_update')
-  const wsRef = useRef<WebSocket | null>(null)
-  const logContainerRef = useRef<HTMLDivElement>(null)
+  // 每加一就重建一次 WebSocket(「刷新」按钮);切换 Tab 也会重建
+  const [connectSeq, setConnectSeq] = useState(0)
   const isMobile = useIsMobile()
 
-  const connectWebSocket = () => {
+  // 清空旧日志并进入加载态,在触发重连的事件里同步完成,不放在 effect 里
+  const resetLogs = () => {
     setIsLoading(true)
     setLogs([])
+  }
 
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
-
+  // effect 只负责订阅外部系统:建立连接、把消息写进 state、清理时关闭。
+  // 上一条连接由 cleanup 关闭,不再需要用 ref 手动跟踪。
+  useEffect(() => {
     const isDev = process.env.NODE_ENV === 'development'
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const server = isDev
@@ -103,7 +106,6 @@ export default function LogViewer() {
     const wsUrl = `${server}/v1/ws/logs?file=${activeTab}.log`
 
     const ws = new WebSocket(wsUrl)
-    wsRef.current = ws
 
     ws.onopen = () => {
       setIsConnected(true)
@@ -112,7 +114,7 @@ export default function LogViewer() {
     }
 
     ws.onmessage = (event) => {
-      setLogs((prev) => [...prev, event.data])
+      setLogs((prev) => appendLogMessage(prev, event.data))
     }
 
     ws.onerror = () => {
@@ -124,22 +126,27 @@ export default function LogViewer() {
       setIsLoading(false)
     }
 
+    // 切换标签、刷新、离开页面时是我们自己关的；其余的断开（含会话被收回后后端主动断开）要刷新权限点
+    let closedByUs = false
     ws.onclose = () => {
       setIsConnected(false)
+      if (!closedByUs) revalidateMe()
     }
-  }
 
-  useEffect(() => {
-    connectWebSocket()
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      closedByUs = true
+      ws.close()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
+  }, [activeTab, connectSeq])
 
-  const handleRefresh = () => connectWebSocket()
+  const handleTabChange = (key: string) => {
+    resetLogs()
+    setActiveTab(key)
+  }
+  const handleRefresh = () => {
+    resetLogs()
+    setConnectSeq((n) => n + 1)
+  }
   const handleClear = () => setLogs([])
 
   const actions = (
@@ -164,17 +171,16 @@ export default function LogViewer() {
       <PageHeader
         icon={<IconCustomerSupport size="large" />}
         title="实时日志"
-        description="主程序运行与下载上传日志,WebSocket 实时推送"
         actions={actions}
       />
       <div className={dc.content}>
         <div className={dc.card} style={{ padding: 16 }}>
-          <Tabs type="line" activeKey={activeTab} onChange={setActiveTab}>
+          <Tabs type="line" activeKey={activeTab} onChange={handleTabChange}>
             <TabPane tab="主程序运行日志" itemKey="ds_update">
-              <LogContent logs={logs} logContainerRef={logContainerRef} isLoading={isLoading} />
+              <LogContent logs={logs} isLoading={isLoading} />
             </TabPane>
             <TabPane tab="biliup下载和上传日志" itemKey="download">
-              <LogContent logs={logs} logContainerRef={logContainerRef} isLoading={isLoading} />
+              <LogContent logs={logs} isLoading={isLoading} />
             </TabPane>
           </Tabs>
         </div>

@@ -1,10 +1,76 @@
-# 依赖（CI 用 npm ci 重新安装；本地符号链接不提交）
-node_modules/
-
-# Next.js 构建产物
-.next/
-out/
-
-# 编辑器 / 系统
-.DS_Store
+.idea
+.vscode
+*.pyc
+*.flv
+*.mp4
+*.part
+*.webm
+backup
+venv./
+.venv/
+.run/
+test/
+pdm.lock
+.pdm-python
+config.*.*
+config.yaml
+!public/config.yaml
+/configlog.ini
+ds_update.log*
+*.cookie
+*.zip
+*.exe
+*.egg-info
+dist/
+build/
+cover/
+cache/
+.cursor/
+# Runtime clip exports in the working directory, not source modules.
+/clips/
+*.back
+bili.cookie.json
+archive.txt
+/node_modules
+watch_process.pid
+biliup/**/public
+*.xml
+!package-lock.json
+qrcode.png
 *.log
+*.tsbuildinfo
+/*.ts
+/biliup/stream-gears/
+data/
+.next
+out
+downloads/
+target
+_internal
+.trae/
+pnpm-lock.yaml
+cookies.json
+.augment/
+.cunzhi-memory/
+.serena/
+.cargo/*
+logs/
+.claude/
+/public/jassub/
+/tauri-app/src-tauri/render-tools/
+# 随包中文字体按固定 SHA-256 获取，见 crates/biliup-cli/assets/render-tools/README.txt
+/crates/biliup-cli/assets/render-tools/fonts/*.otf
+/crates/biliup-cli/assets/render-tools/fonts/*.ttf
+/renders/
+/crates/stream-gears/stream_gears/*.so
+/crates/stream-gears/stream_gears/*.pyd
+cilps/
+*.tmp
+.codex/
+
+# Local agent instructions (repository root only)
+/AGENTS.md
+/CLAUDE.md
+
+# 本地自检用：scripts/shots.ps1 生成的逐页截图
+/shots/

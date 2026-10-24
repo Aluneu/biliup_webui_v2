@@ -1,33 +1,20 @@
 'use client'
-import React, { useEffect, useRef, useState } from 'react'
-import { Form, Button, Toast, Notification, Typography } from '@douyinfe/semi-ui'
+import React, { useRef } from 'react'
+import { Form, Toast, Notification, Typography } from '@douyinfe/semi-ui'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import { IconPlusCircle } from '@douyinfe/semi-icons'
-import { registerMediaQuery, responsiveMap } from '../../../lib/utils'
 import { sendRequest, StudioEntity } from '../../../lib/api-streamer'
 import useSWRMutation from 'swr/mutation'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/lib/nav'
 import TemplateFields from '../../../ui/TemplateFields'
-import PageHeader from '../../components/PageHeader'
-import dc from '@/app/ui/data-card.module.scss'
+import { FormPage, usePageLabelPosition } from '@/app/ui/shell'
 
 export default function Add() {
   const { Paragraph } = Typography
   const { trigger } = useSWRMutation('/v1/upload/streamers', sendRequest)
   const router = useRouter()
-  const api = useRef<FormApi>()
-  const [labelPosition, setLabelPosition] = useState<'top' | 'left' | 'inset'>('inset')
-  useEffect(() => {
-    const unRegister = registerMediaQuery(responsiveMap.lg, {
-      match: () => {
-        setLabelPosition('left')
-      },
-      unmatch: () => {
-        setLabelPosition('top')
-      },
-    })
-    return () => unRegister()
-  }, [])
+  const api = useRef<FormApi>(undefined)
+  const labelPosition = usePageLabelPosition()
 
   const handleCreate = async () => {
     const values = await api.current?.validate()
@@ -40,6 +27,7 @@ export default function Add() {
         id: values.id,
         copyright_source: values.copyright_source ?? '',
         tid: values.tid[1],
+        tid_v2: values.tid_v2 ?? null,
         cover_path: values.cover_path ?? '',
         title: values.title ?? '',
         description: values.description ?? '',
@@ -59,7 +47,7 @@ export default function Add() {
         uploader: values.uploader,
         extra_fields: values.extra_fields ?? '',
       }
-      const result = await trigger(studioEntity)
+      await trigger(studioEntity)
       Toast.success('创建成功')
       router.push('/upload-manager')
     } catch (e: any) {
@@ -73,29 +61,22 @@ export default function Add() {
   }
 
   return (
-    <>
-      <PageHeader
-        icon={<IconPlusCircle size="large" />}
-        title="新建投稿模板"
-        description="配置投稿模板,保存后可用于上传录制文件"
-        actions={
-          <Button onClick={handleCreate} type="primary" icon={<IconPlusCircle />} theme="solid">
-            创建模板
-          </Button>
-        }
+    <FormPage
+      title="新建投稿模板"
+      description="配置投稿模板,保存后可用于上传录制文件"
+      back={{ href: '/upload-manager', label: '投稿管理' }}
+      okText="创建模板"
+      okIcon={<IconPlusCircle />}
+      onOk={handleCreate}
+    >
+      <Form
+        autoScrollToError
+        onSubmit={handleCreate}
+        component={TemplateFields}
+        getFormApi={(formApi) => (api.current = formApi)}
+        labelWidth="140px"
+        labelPosition={labelPosition}
       />
-      <div className={dc.content}>
-        <div className={dc.card} style={{ padding: '28px 32px 40px' }}>
-          <Form
-            autoScrollToError
-            onSubmit={handleCreate}
-            component={TemplateFields}
-            getFormApi={(formApi) => (api.current = formApi)}
-            labelWidth="180px"
-            labelPosition={labelPosition}
-          />
-        </div>
-      </div>
-    </>
+    </FormPage>
   )
 }
