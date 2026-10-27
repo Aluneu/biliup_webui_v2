@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react'
 import { Form, Radio, RadioGroup, Select, useFormApi, useFormState } from '@douyinfe/semi-ui'
 import { usePathname } from 'next/navigation'
-import { useRouter } from '@/app/lib/nav'
 import { useMe } from '../../lib/use-me'
 import {
   douyuCookieOverrideMode,

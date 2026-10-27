@@ -272,6 +272,17 @@ mock 层从 1 个 `mock.ts`（约 500 行）拆成 12 个模块（约 9.4k 行�
 调用的 **80 余条接口路径**（含方法与别名约 170 个组合）；`/v1/me` 恒返回超级管理员 +
 全部 15 个权限点，所以所有页面与按钮都可见。
 
+### 跟进的上游 PR
+
+| PR | 内容 | 落在演示站的文件 |
+|---|---|---|
+| [#1823](https://github.com/biliup/biliup/pull/1823) | 投稿模板卡片重做：名称最多两行不再被按钮挤成「老番…」，补标题模板 / 账号 / 类型 / 分区 / 定时 / 默认标签，列表改 `auto-fill` 网格，加载中 / 空 / 失败三态 | `app/ui/TemplateCard.tsx`（新增）、`app/ui/template-card.module.scss`（新增）、`app/(app)/upload-manager/page.tsx` |
+| [#1825](https://github.com/biliup/biliup/pull/1825) | 卡片补分区名（`tid` → 「172(手机游戏)」，数据取 `/bili/archive/pre`，不硬编码 tid 表）、投稿账号不再回落到 cookie 文件路径、定时秒数改 `Math.floor` 修掉「3 小时 60 分钟」 | `app/lib/use-streamers.ts`（新增 `useTidNames()`）、`app/ui/TemplateCard.tsx`、`app/(app)/upload-manager/page.tsx` |
+
+演示站的 mock 已经能喂上这两处改动：`/bili/archive/pre` 返回 6 个一级分区、含
+17/31/172/211 等二级 tid，`/v1/users/{id}` 返回 `{data:{name,face}}`，所以卡片上的
+「分区 172(手机游戏)」「账号 老番茄的投稿号」都是真实走接口渲染出来的。
+
 自检记录：`tsc --noEmit` 通过；`next build` 26 条路由全部静态导出成功；
 `scripts/shots.ps1` 用无头 Edge 逐页截图（`shots/`），Console 里除了「没有真实视频流」
 导致的播放器重试（预期）之外没有 JS 异常。

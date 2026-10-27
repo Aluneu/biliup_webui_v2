@@ -1,7 +1,6 @@
 'use client'
 import { Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useRouter } from '@/app/lib/nav'
 import { Spin, Tabs, TabPane } from '@douyinfe/semi-ui'
 import { IconScissors } from '@douyinfe/semi-icons'
 import { type WorkbenchTab, parseWorkbenchTab } from '@/app/lib/workbench'
