@@ -886,7 +886,7 @@ const templates: FleetTemplate[] = [
   {
     id: 3,
     template_name: '水友赛-隔天投稿',
-    title: '深夜水友赛 第 {episode} 期',
+    title: '深夜水友赛 %Y-%m-%d 录播',
     tid: 17,
     tid_v2: null,
     copyright: 2,

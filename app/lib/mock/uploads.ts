@@ -205,26 +205,73 @@ const publishJobs: PublishJob[] = [
 
 const nextJobId = () => publishJobs.reduce((max, job) => Math.max(max, job.id), 1500) + 1
 
-/** 模板标题里的占位符：{streamer} {title} {date} {episode} */
-function templateVars(template: TemplateRow): Record<string, string> {
+/**
+ * 模板标题 / 简介 / 标签用的变量，与后端 `Recorder` 保持一致：
+ * `{streamer}` `{title}` `{url}` + strftime（按开播时间格式化）。
+ */
+interface TemplateVars {
+  streamer: string
+  title: string
+  url: string
+  /** 这场录制的开始时间：`%Y-%m-%d` 等指令按它格式化 */
+  date: Date
+}
+
+function templateVars(template: TemplateRow): TemplateVars {
   const streamer =
     db.streamers.find((s) => s.upload_streamers_id === template.id) ?? db.streamers[0]
-  const date = new Date(NOW_SEC * 1000).toISOString().slice(0, 10)
   return {
     streamer: streamer?.remark ?? '主播',
     title: '【实况】今晚通宵打星际，来就完了',
-    date,
-    episode: '88',
     url: streamer?.url ?? 'https://live.bilibili.com/77330',
+    date: new Date(NOW_SEC * 1000),
   }
 }
 
-function fillVars(text: string, vars: Record<string, string>): string {
-  return text.replace(/\{(streamer|title|date|episode|url)\}/g, (_, key: string) => vars[key] ?? '')
+/** 只实现模板里常用的 strftime 指令，不认识的指令原样保留（后端 chrono 的集合更大，演示够用） */
+function strftime(date: Date, format: string): string {
+  const pad = (n: number, width = 2) => String(n).padStart(width, '0')
+  return format.replace(/%([YymdHMSj%])/g, (token, code: string) => {
+    switch (code) {
+      case 'Y':
+        return String(date.getFullYear())
+      case 'y':
+        return String(date.getFullYear()).slice(-2)
+      case 'm':
+        return pad(date.getMonth() + 1)
+      case 'd':
+        return pad(date.getDate())
+      case 'H':
+        return pad(date.getHours())
+      case 'M':
+        return pad(date.getMinutes())
+      case 'S':
+        return pad(date.getSeconds())
+      case 'j': {
+        const yearStart = new Date(date.getFullYear(), 0, 1)
+        return pad(Math.floor((date.getTime() - yearStart.getTime()) / 86_400_000) + 1, 3)
+      }
+      case '%':
+        return '%'
+      default:
+        return token
+    }
+  })
+}
+
+/**
+ * 模板渲染：先按开播时间做 strftime，再替换 `{streamer}` `{title}` `{url}`。
+ * 顺序和后端一致——变量值里的 `%` 不会被当成格式符；未知的 `{xxx}` 原样保留。
+ */
+function fillVars(text: string, vars: TemplateVars): string {
+  return strftime(vars.date, text).replace(
+    /\{(streamer|title|url)\}/g,
+    (_, key: 'streamer' | 'title' | 'url') => vars[key],
+  )
 }
 
 /** 转载来源：模板填了就用模板的（去掉「转自」前缀），否则用直播间地址 */
-function sourceUrl(template: TemplateRow, vars: Record<string, string>): string {
+function sourceUrl(template: TemplateRow, vars: TemplateVars): string {
   const raw = template.copyright_source?.trim()
   if (raw) return raw.replace(/^转自\s*/, '')
   return vars.url
